@@ -1,6 +1,8 @@
 # Life360 MCP Server
 
-This repository provides a **minimal MCP (JSON‑RPC) server** that exposes the Life360 location‑tracking API to the Hermes agent. It mirrors the behaviour of the Home Assistant `ha-life360` integration but is deliberately lightweight so that it can run inside the same Docker image as the Hermes stack.
+> This implementation is based on the [ha-life360](https://github.com/pnbruckner/life360) Home Assistant integration. It uses the same API endpoints, authentication methods, and request patterns.
+
+This repository provides a **minimal MCP (JSON‑RPC) server** that exposes the Life360 location‑tracking API to the Hermes agent. It mirrors the behaviour of the Home Assistant `ha-life360` integration but is deliberately lightweight so that it can run inside the same Docker image as the Hermes stack.
 
 ## Features
 
