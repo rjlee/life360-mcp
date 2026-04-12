@@ -304,8 +304,10 @@ class Life360Client:
             def do_POST(self):
                 length = int(self.headers.get("Content-Length", 0))
                 body = self.rfile.read(length).decode()
+                req_id = None
                 try:
                     req = json.loads(body)
+                    req_id = req.get("id")
                     method = req.get("method")
                     params = req.get("params")
                     if method == "list_circles":
@@ -330,7 +332,7 @@ class Life360Client:
                         raise ValueError(f"Unsupported method {method}")
                     self._send({"jsonrpc": "2.0", "result": result, "id": req.get("id")})
                 except Exception as exc:
-                    self._send({"jsonrpc": "2.0", "error": {"code": -32603, "message": str(exc)}, "id": req.get("id")}, code=500)
+                    self._send({"jsonrpc": "2.0", "error": {"code": -32603, "message": str(exc)}, "id": req_id}, code=500)
         server = HTTPServer((host, port), Handler)
         logger.info("Life360 MCP HTTP server listening on %s:%s", host, port)
         server.serve_forever()
