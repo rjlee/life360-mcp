@@ -11,7 +11,6 @@ venv/
 ha-life360
 tests
 run.sh
-cli.py
 *.md
 LICENSE
 RELEASE.md
