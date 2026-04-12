@@ -1,0 +1,27 @@
+[project]
+name = "life360-mcp"
+version = "0.1.0"
+description = "Life360 MCP server exposing the Life360 API to Hermes"
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.9"
+dependencies = [
+    "pycurl",
+    "python-dotenv",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+]
+
+[project.scripts]
+life360-mcp = "life360_mcp.server:main"
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]

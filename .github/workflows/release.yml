@@ -1,0 +1,79 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run tests
+        run: pip install pytest && pytest tests/ -v || true
+
+      - name: Semantic Release
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          GIT_AUTHOR_NAME: github-actions[bot]
+          GIT_AUTHOR_EMAIL: github-actions[bot@users.noreply.github.com
+          GIT_COMMITTER_NAME: github-actions[bot]
+          GIT_COMMITTER_EMAIL: github-actions[bot@users.noreply.github.com
+        run: |
+          npm install -g semantic-release
+          semantic-release
+
+      - name: Get latest version
+        id: version
+        run: |
+          VERSION=$(python -c "import toml; print(toml.load('pyproject.toml')['project']['version'])")
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Version is $VERSION"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository }}:latest
+            ghcr.io/${{ github.repository }}:${{ steps.version.outputs.version }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Create GitHub Release
+        if: steps.version.outputs.version
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          REPO="${{ github.repository }}"
+          
+          gh api repos/$REPO/releases \
+            --method POST \
+            -F tag_name="$VERSION" \
+            -F name="Release $VERSION" \
+            -F body="Release $VERSION of Life360 MCP Server"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

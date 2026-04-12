@@ -1,0 +1,17 @@
+.git
+.gitignore
+__pycache__
+*.pyc
+.pytest_cache
+.env
+.venv
+venv/
+*.egg-info
+.github
+ha-life360
+tests
+run.sh
+cli.py
+*.md
+LICENSE
+RELEASE.md

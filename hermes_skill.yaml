@@ -1,0 +1,26 @@
+name: life360
+description: Retrieve Life360 member location and basic circle/member info via MCP.
+tools:
+  - name: get_location
+    description: Get the current location of a Life360 member by name.
+    parameters:
+      type: object
+      properties:
+        member:
+          type: string
+          description: Name (firstName) of the family member.
+      required: [member]
+  - name: list_circles
+    description: List all Life360 circles the user has access to.
+    parameters:
+      type: object
+      properties: {}
+  - name: list_members
+    description: List members of a specific Life360 circle.
+    parameters:
+      type: object
+      properties:
+        circle_id:
+          type: string
+          description: ID of the circle (as returned by list_circles).
+      required: [circle_id]
