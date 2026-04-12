@@ -25,23 +25,22 @@ jobs:
       - name: Run tests
         run: pip install pytest && pytest tests/ -v || true
 
-      - name: Semantic Release
+      - name: Semantic Release (GitHub only)
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GIT_AUTHOR_NAME: github-actions[bot]
           GIT_AUTHOR_EMAIL: github-actions[bot@users.noreply.github.com
           GIT_COMMITTER_NAME: github-actions[bot]
           GIT_COMMITTER_EMAIL: github-actions[bot@users.noreply.github.com
         run: |
-          npm install -g semantic-release
-          semantic-release
+          npm install -g semantic-release@24.2.1
+          semantic-release --extends .releaserc.json
 
       - name: Get latest version
         id: version
         run: |
           VERSION=$(python -c "import toml; print(toml.load('pyproject.toml')['project']['version'])")
           echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "Version is $VERSION"
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -68,12 +67,6 @@ jobs:
         if: steps.version.outputs.version
         run: |
           VERSION="${{ steps.version.outputs.version }}"
-          REPO="${{ github.repository }}"
-          
-          gh api repos/$REPO/releases \
-            --method POST \
-            -F tag_name="$VERSION" \
-            -F name="Release $VERSION" \
-            -F body="Release $VERSION of Life360 MCP Server"
+          gh release create "$VERSION" --title "Release $VERSION" --generate-notes
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
