@@ -295,6 +295,33 @@ class Life360Client:
             port = int(os.getenv("LIFE360_HTTP_PORT", "8123"))
         from http.server import BaseHTTPRequestHandler, HTTPServer
         client = self
+        
+        MCP_TOOLS = [
+            {
+                "name": "list_circles",
+                "description": "List all Life360 circles (groups)",
+                "inputSchema": {"type": "object", "properties": {}}
+            },
+            {
+                "name": "list_members",
+                "description": "List all members in a circle",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {"circle_id": {"type": "string", "description": "Circle ID"}},
+                    "required": ["circle_id"]
+                }
+            },
+            {
+                "name": "get_location",
+                "description": "Get location info for a specific member",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {"member": {"type": "string", "description": "Member name"}},
+                    "required": ["member"]
+                }
+            }
+        ]
+        
         class Handler(BaseHTTPRequestHandler):
             def _send(self, payload: Any, code: int = 200):
                 self.send_response(code)
@@ -305,34 +332,45 @@ class Life360Client:
                 length = int(self.headers.get("Content-Length", 0))
                 body = self.rfile.read(length).decode()
                 req_id = None
+                logger.info("Incoming request: %s", body)
                 try:
                     req = json.loads(body)
                     req_id = req.get("id")
                     method = req.get("method")
-                    params = req.get("params")
-                    if method == "list_circles":
-                        result = client.list_circles()
-                    elif method == "list_members":
-                        if isinstance(params, list) and params:
-                            circle_id = params[0]
-                        elif params and isinstance(params, dict):
-                            circle_id = params.get("circle_id")
+                    params = req.get("params") or {}
+                    logger.info("RPC method=%s params=%s id=%s", method, params, req_id)
+                    
+                    if method == "initialize":
+                        result = {
+                            "protocolVersion": "2024-11-05",
+                            "capabilities": {"tools": {}},
+                            "serverInfo": {"name": "life360-mcp", "version": "1.0.0"}
+                        }
+                    elif method == "tools/list":
+                        result = {"tools": MCP_TOOLS}
+                    elif method == "tools/call":
+                        tool_name = params.get("name")
+                        tool_args = params.get("arguments", {})
+                        if tool_name == "list_circles":
+                            result = {"content": [{"type": "text", "text": json.dumps(client.list_circles())}]}
+                        elif tool_name == "list_members":
+                            circle_id = tool_args.get("circle_id")
+                            result = {"content": [{"type": "text", "text": json.dumps(client.list_members(circle_id))}]}
+                        elif tool_name == "get_location":
+                            member = tool_args.get("member")
+                            result = {"content": [{"type": "text", "text": json.dumps(client.get_location(member))}]}
                         else:
-                            raise ValueError("Missing circle_id for list_members")
-                        result = client.list_members(circle_id)
-                    elif method == "get_location":
-                        if isinstance(params, list) and params:
-                            member = params[0]
-                        elif params and isinstance(params, dict):
-                            member = params.get("member")
-                        else:
-                            member = params
-                        result = client.get_location(member)
+                            raise ValueError(f"Unknown tool: {tool_name}")
+                    elif method == "ping":
+                        result = {}
                     else:
                         raise ValueError(f"Unsupported method {method}")
                     self._send({"jsonrpc": "2.0", "result": result, "id": req.get("id")})
                 except Exception as exc:
+                    logger.exception("Error handling RPC: %s", exc)
                     self._send({"jsonrpc": "2.0", "error": {"code": -32603, "message": str(exc)}, "id": req_id}, code=500)
+            def do_GET(self):
+                self._send({"jsonrpc": "2.0", "error": {"code": -32603, "message": "Use POST for MCP calls"}}, code=501)
         server = HTTPServer((host, port), Handler)
         logger.info("Life360 MCP HTTP server listening on %s:%s", host, port)
         server.serve_forever()
