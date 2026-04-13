@@ -363,6 +363,12 @@ class Life360Client:
                             raise ValueError(f"Unknown tool: {tool_name}")
                     elif method == "ping":
                         result = {}
+                    elif method.startswith("notifications/"):
+                        self.send_response(200)
+                        self.send_header("Content-Type", "application/json")
+                        self.end_headers()
+                        self.wfile.write(b"{}")
+                        return
                     else:
                         raise ValueError(f"Unsupported method {method}")
                     self._send({"jsonrpc": "2.0", "result": result, "id": req.get("id")})
